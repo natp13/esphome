@@ -43,12 +43,10 @@ void TemplateSwitch::setup() {
   if (!this->restore_state_)
     return;
 
-  auto restored = this->get_initial_state();
-  if (!restored.has_value())
-    return;
+  bool restored = this->get_initial_state();
 
-  ESP_LOGD(TAG, "  Restored state %s", ONOFF(*restored));
-  if (*restored) {
+  ESP_LOGD(TAG, "  Restored state %s", ONOFF(restored));
+  if (restored) {
     this->turn_on();
   } else {
     this->turn_off();
