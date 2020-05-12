@@ -7,13 +7,6 @@
 namespace esphome {
 namespace switch_ {
 
-enum SwitchRestoreMode {
-  SWITCH_RESTORE_DEFAULT_OFF,
-  SWITCH_RESTORE_DEFAULT_ON,
-  SWITCH_ALWAYS_OFF,
-  SWITCH_ALWAYS_ON,
-};
-
 #define LOG_SWITCH(prefix, type, obj) \
   if (obj != nullptr) { \
     ESP_LOGCONFIG(TAG, "%s%s '%s'", prefix, type, obj->get_name().c_str()); \
@@ -26,22 +19,6 @@ enum SwitchRestoreMode {
     if (obj->is_inverted()) { \
       ESP_LOGCONFIG(TAG, "%s  Inverted: YES", prefix); \
     } \
-    const char *restore_mode = ""; \
-    switch (this->restore_mode_) { \
-      case esphome::switch_::SWITCH_RESTORE_DEFAULT_OFF: \
-        restore_mode = "Restore (Defaults to OFF)"; \
-        break; \
-      case esphome::switch_::SWITCH_RESTORE_DEFAULT_ON: \
-        restore_mode = "Restore (Defaults to ON)"; \
-        break; \
-      case esphome::switch_::SWITCH_ALWAYS_OFF: \
-        restore_mode = "Always OFF"; \
-        break; \
-      case esphome::switch_::SWITCH_ALWAYS_ON: \
-        restore_mode = "Always ON"; \
-        break; \
-    } \
-    ESP_LOGCONFIG(TAG, "  Restore Mode: %s", restore_mode); \
   }
 
 /** Base class for all switches.
@@ -116,7 +93,9 @@ class Switch : public Nameable {
 
   bool is_inverted() const;
 
-  void set_restore_mode(SwitchRestoreMode restore_mode);
+  void set_preference(ESPPreferenceObject preference);
+
+  void set_initial_value(bool initial_value);
 
  protected:
   /** Write the given state to hardware. You should implement this
@@ -145,7 +124,6 @@ class Switch : public Nameable {
   bool inverted_{false};
   Deduplicator<bool> publish_dedup_;
   ESPPreferenceObject rtc_;
-  SwitchRestoreMode restore_mode_{SWITCH_RESTORE_DEFAULT_OFF};
 };
 
 }  // namespace switch_

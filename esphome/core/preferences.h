@@ -7,6 +7,31 @@
 
 namespace esphome {
 
+enum RestoreMode {
+    RESTORE_ALWAYS_INITIAL_VALUE,
+    RESTORE_DEFAULT,
+    RESTORE_FROM_FLASH,
+};
+
+#define LOG_STATEFUL_COMPONENT(this) \
+  const char *restore_mode = ""; \
+  switch (this->restore_mode_) { \
+    case RESTORE_ALWAYS_INITIAL_VALUE: \
+      restore_mode = "Always restore initial value"; \
+      break; \
+    case RESTORE_DEFAULT: \
+      restore_mode = "Restore using default state storage (always flash on esp32 and \\
+        esp8266_restore_from_flash mode for esp8266"; \
+      break; \
+    case RESTORE_FROM_FLASH: \
+      restore_mode = "Always restore from flash"; \
+      break; \
+    case esphome::switch_::SWITCH_ALWAYS_ON: \
+      restore_mode = "Always ON"; \
+      break; \
+  } \
+  ESP_LOGCONFIG(TAG, "  Restore Mode: %s", restore_mode); \
+
 class ESPPreferenceObject {
  public:
   ESPPreferenceObject();
@@ -15,6 +40,8 @@ class ESPPreferenceObject {
   template<typename T> bool save(T *src);
 
   template<typename T> bool load(T *dest);
+
+  template<typename T> bool set_fallback_value(const T& fallback_value);
 
   bool is_initialized() const;
 
@@ -32,6 +59,8 @@ class ESPPreferenceObject {
   size_t length_words_;
   uint32_t type_;
   uint32_t *data_;
+  bool has_fallback_value_ = false;
+  RestoreMode restore_mode_ = RESTORE_DEFAULT;
 #ifdef ARDUINO_ARCH_ESP8266
   bool in_flash_{false};
 #endif
@@ -55,6 +84,7 @@ class ESPPreferences {
   void begin();
   ESPPreferenceObject make_preference(size_t length, uint32_t type, bool in_flash = DEFAULT_IN_FLASH);
   template<typename T> ESPPreferenceObject make_preference(uint32_t type, bool in_flash = DEFAULT_IN_FLASH);
+  template<typename T> ESPPreferenceObject make_preference(uint32_t type, RestoreMode restore_mode);
 
 #ifdef ARDUINO_ARCH_ESP8266
   /** On the ESP8266, we can't override the first 128 bytes during OTA uploads
@@ -89,20 +119,52 @@ template<typename T> ESPPreferenceObject ESPPreferences::make_preference(uint32_
   return this->make_preference((sizeof(T) + 3) / 4, type, in_flash);
 }
 
+template<typename T> ESPPreferenceObject ESPPreferences::make_preference(
+  uint32_t type,
+  RestoreMode restore_mode) {
+  bool in_flash = DEFAULT_IN_FLASH;
+  if (restore_mode == RESTORE_ALWAYS_INITIAL_VALUE)
+    in_flash = false;
+  else if (restore_mode == RESTORE_FROM_FLASH)
+    in_flash = true;
+
+  auto result = this->make_preference((sizeof(T) + 3) / 4, type, in_flash);
+  result.restore_mode_ = restore_mode;
+  return result;
+}
+
 template<typename T> bool ESPPreferenceObject::save(T *src) {
-  if (!this->is_initialized())
+  if (!this->set_fallback_value(*src))
     return false;
-  memset(this->data_, 0, this->length_words_ * 4);
-  memcpy(this->data_, src, sizeof(T));
+
   return this->save_();
 }
 
 template<typename T> bool ESPPreferenceObject::load(T *dest) {
   memset(this->data_, 0, this->length_words_ * 4);
-  if (!this->load_())
+
+  // Only try to load if we aren't supposed to restore the initial value
+  if ((this->restore_mode_ != RESTORE_ALWAYS_INITIAL_VALUE) &&
+    !this->load_() &&
+    !this->has_fallback_value_)
+      return false;
+
+  // It shouldn't be possible to be trying to restore the initial value without getting a fallback
+  // value.
+  if ((this->restore_mode_ == RESTORE_ALWAYS_INITIAL_VALUE) && !this->has_fallback_value_)
     return false;
 
   memcpy(dest, this->data_, sizeof(T));
+  return true;
+}
+
+template<typename T> bool ESPPreferenceObject::set_fallback_value(const T& fallback_value) {
+  if (!this->is_initialized())
+    return false;
+  memset(this->data_, 0, this->length_words_ * 4);
+  memcpy(this->data_, &fallback_value, sizeof(T));
+
+  has_fallback_value_ = true;
   return true;
 }
 

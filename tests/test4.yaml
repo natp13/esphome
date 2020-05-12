@@ -1,0 +1,38 @@
+esphome:
+  name: test1
+  # platform: ESP32
+  # board: nodemcu-32s
+  platform: ESP8266
+  board: nodemcuv2
+
+wifi:
+  networks:
+  - ssid: 'MySSID'
+    password: 'password1'
+  manual_ip:
+    static_ip: 192.168.178.230
+    gateway: 192.168.178.1
+    subnet: 255.255.255.0
+    dns1: 1.1.1.1
+    dns2: 1.2.2.1
+  domain: .local
+  reboot_timeout: 120s
+  power_save_mode: none
+
+mqtt:
+  broker: '192.168.178.84'
+  port: 1883
+  username: 'debug'
+  password: 'debug'
+  client_id: someclient
+  discovery: True
+  discovery_retain: False
+  discovery_prefix: discovery
+  topic_prefix: helloworld
+
+switch:
+  - platform: gpio
+    pin: D0
+    name: "Living Room Dehumidifier"
+    initial_value: Off
+    restore_mode: ALWAYS_INITIAL_VALUE

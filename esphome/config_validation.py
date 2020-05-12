@@ -12,12 +12,14 @@ from string import ascii_letters, digits
 
 import voluptuous as vol
 
+import esphome.codegen as cg
 from esphome import core
 from esphome.const import CONF_AVAILABILITY, CONF_COMMAND_TOPIC, CONF_DISCOVERY, CONF_ID, \
     CONF_INTERNAL, CONF_NAME, CONF_PAYLOAD_AVAILABLE, CONF_PAYLOAD_NOT_AVAILABLE, \
     CONF_RETAIN, CONF_SETUP_PRIORITY, CONF_STATE_TOPIC, CONF_TOPIC, \
     CONF_HOUR, CONF_MINUTE, CONF_RETAIN_COMMANDS, CONF_SECOND, CONF_VALUE, CONF_UPDATE_INTERVAL, \
-    CONF_TYPE_ID, CONF_TYPE
+    CONF_TYPE_ID, CONF_TYPE, CONF_INITIAL_VALUE, CONF_RESTORE_MODE, CONF_RESTORE_STATE, \
+    CONF_RESTORE_VALUE, CONF_RESTORE
 from esphome.core import CORE, HexInt, IPAddress, Lambda, TimePeriod, TimePeriodMicroseconds, \
     TimePeriodMilliseconds, TimePeriodSeconds, TimePeriodMinutes
 from esphome.helpers import list_starts_with
@@ -1289,6 +1291,62 @@ MQTT_COMMAND_COMPONENT_SCHEMA = MQTT_COMPONENT_SCHEMA.extend({
 COMPONENT_SCHEMA = Schema({
     Optional(CONF_SETUP_PRIORITY): float_
 })
+
+RestoreMode = cg.esphome_ns.enum('RestoreMode')
+RESTORE_MODES = {
+    'RESTORE_DEFAULT_OFF': RestoreMode.RESTORE_DEFAULT_OFF, # deprecated
+    'RESTORE_DEFAULT_ON': RestoreMode.RESTORE_DEFAULT_ON, # deprecated
+    'ALWAYS_OFF': RestoreMode.RESTORE_ALWAYS_OFF, # deprecated
+    'ALWAYS_ON': RestoreMode.RESTORE_ALWAYS_ON, # deprecated
+    'ALWAYS_INITIAL_VALUE': RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE,
+    'DEFAULT': RestoreMode.RESTORE_DEFAULT,
+    'FROM_FLASH': RestoreMode.RESTORE_FROM_FLASH,
+}
+
+def stateful_component_schema(initial_value_type_validator):
+    return Schema({
+        # Optional(CONF_INITIAL_VALUE): templatable(initial_value_type_validator),
+        Optional(CONF_INITIAL_VALUE): initial_value_type_validator,
+        Optional(CONF_RESTORE_MODE): enum(RESTORE_MODES, upper=True, space='_'),
+        Optional(CONF_RESTORE_STATE) : boolean, # deprecated
+        Optional(CONF_RESTORE_VALUE) : boolean, # deprecated
+        Optional(CONF_RESTORE) : boolean, # deprecated
+        # TODO: need to validate that only one of restore_state, etc is used. And log warning about deprecation?
+    })#, has_at_most_one_key(CONF_RESTORE_MODE, CONF_RESTORE_STATE, CONF_RESTORE_VALUE, CONF_RESTORE)
+
+def stateful_component_to_code(var, config, state_type):
+    restore_mode = 'DEFAULT'
+    if CONF_RESTORE_MODE in config:
+        if config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_OFF' or config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_ON':
+            restore_mode = 'DEFAULT'
+        elif config[CONF_RESTORE_MODE] == 'ALWAYS_OFF' or config[CONF_RESTORE_MODE] == 'ALWAYS_ON':
+            restore_mode = 'ALWAYS_INITIAL_VALUE'
+        else:
+            restore_mode = config[CONF_RESTORE_MODE]
+    elif CONF_RESTORE_STATE in config:
+        if not config[CONF_RESTORE_STATE]:
+            restore_mode = 'ALWAYS_INITIAL_VALUE'
+    elif CONF_RESTORE_VALUE in config:
+        if not config[CONF_RESTORE_VALUE]:
+            restore_mode = 'ALWAYS_INITIAL_VALUE'
+    elif CONF_RESTORE in config:
+        if not config[CONF_RESTORE]:
+            restore_mode = 'ALWAYS_INITIAL_VALUE'
+
+    # cg.Add(var.rtc_ = global_preferences.make_preference<bool>(var.get_object_id_hash(), restore_mode))
+    # make_preference = cg.RawExpression("global_preferences.make_preference<bool>")
+    # new_preference = cg.Pvariable()
+    global_preferences = cg.esphome_ns.class_("global_preferences")
+    cg.add(var.set_preference(global_preferences.make_preference(cg.TemplateArguments(state_type), 
+        var.get_object_id_hash(),
+        restore_mode)))
+
+    if CONF_INITIAL_VALUE in config:
+        cg.add(var.set_initial_value(config[CONF_INITIAL_VALUE]))
+    elif config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_OFF' or config[CONF_RESTORE_MODE] == 'ALWAYS_OFF':
+        cg.add(var.set_initial_value(False))
+    elif config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_ON' or config[CONF_RESTORE_MODE] == 'ALWAYS_ON':
+        cg.add(var.set_fallback_value(True))
 
 
 def polling_component_schema(default_update_interval):

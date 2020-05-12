@@ -31,23 +31,8 @@ void Switch::toggle() {
 }
 bool Switch::get_initial_state() {
   bool initial_state;
-
-  switch (this->restore_mode_) {
-    case SWITCH_RESTORE_DEFAULT_OFF:
-    case SWITCH_RESTORE_DEFAULT_ON:
-      this->rtc_ = global_preferences.make_preference<bool>(this->get_object_id_hash());
-      // Attempt to load from preferences, else fall back to default values from struct
-        if (!this->rtc_.load(&initial_state))
-          initial_state = (this->restore_mode_ == SWITCH_RESTORE_DEFAULT_ON);
-      break;
-    case SWITCH_ALWAYS_OFF:
-      initial_state = false;
-      break;
-    case SWITCH_ALWAYS_ON:
-      initial_state = true;
-      break;
-  }
-
+  // TODO: check bool?
+  this->rtc_.load(&initial_state);
   return initial_state;
 }
 void Switch::publish_state(bool state) {
@@ -69,8 +54,14 @@ void Switch::set_inverted(bool inverted) { this->inverted_ = inverted; }
 uint32_t Switch::hash_base() { return 3129890955UL; }
 bool Switch::is_inverted() const { return this->inverted_; }
 
-void Switch::set_restore_mode(SwitchRestoreMode restore_mode) {
-  this->restore_mode_ = restore_mode;
+// TODO: move semantics??
+void Switch::set_preference(ESPPreferenceObject preference) {
+  this->rtc_ = preference;
+  this->rtc_.set_fallback_value(false);
+}
+
+void Switch::set_initial_value(bool initial_value) {
+  this->rtc_.set_fallback_value<bool>(initial_value);
 }
 
 }  // namespace switch_
