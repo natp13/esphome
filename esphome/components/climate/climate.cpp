@@ -143,6 +143,7 @@ void Climate::add_on_state_callback(std::function<void()> &&callback) {
 }
 
 optional<ClimateDeviceRestoreState> Climate::restore_state_() {
+  // TODO: add restore_mode
   this->rtc_ = global_preferences.make_preference<ClimateDeviceRestoreState>(this->get_object_id_hash());
   ClimateDeviceRestoreState recovered{};
   if (!this->rtc_.load(&recovered))
