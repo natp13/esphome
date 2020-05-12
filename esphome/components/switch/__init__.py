@@ -4,7 +4,7 @@ from esphome import automation
 from esphome.automation import Condition, maybe_simple_id
 from esphome.components import mqtt
 from esphome.const import CONF_ICON, CONF_ID, CONF_INTERNAL, CONF_INVERTED, CONF_ON_TURN_OFF, \
-    CONF_ON_TURN_ON, CONF_TRIGGER_ID, CONF_MQTT_ID, CONF_NAME
+    CONF_ON_TURN_ON, CONF_TRIGGER_ID, CONF_MQTT_ID, CONF_NAME, CONF_RESTORE_MODE
 from esphome.core import CORE, coroutine, coroutine_with_priority
 
 IS_PLATFORM_COMPONENT = True
@@ -22,6 +22,15 @@ SwitchCondition = switch_ns.class_('SwitchCondition', Condition)
 SwitchTurnOnTrigger = switch_ns.class_('SwitchTurnOnTrigger', automation.Trigger.template())
 SwitchTurnOffTrigger = switch_ns.class_('SwitchTurnOffTrigger', automation.Trigger.template())
 
+SwitchRestoreMode = switch_ns.enum('SwitchRestoreMode')
+
+RESTORE_MODES = {
+    'RESTORE_DEFAULT_OFF': SwitchRestoreMode.SWITCH_RESTORE_DEFAULT_OFF,
+    'RESTORE_DEFAULT_ON': SwitchRestoreMode.SWITCH_RESTORE_DEFAULT_ON,
+    'ALWAYS_OFF': SwitchRestoreMode.SWITCH_ALWAYS_OFF,
+    'ALWAYS_ON': SwitchRestoreMode.SWITCH_ALWAYS_ON,
+}
+
 icon = cv.icon
 
 SWITCH_SCHEMA = cv.MQTT_COMMAND_COMPONENT_SCHEMA.extend({
@@ -35,12 +44,15 @@ SWITCH_SCHEMA = cv.MQTT_COMMAND_COMPONENT_SCHEMA.extend({
     cv.Optional(CONF_ON_TURN_OFF): automation.validate_automation({
         cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(SwitchTurnOffTrigger),
     }),
+    cv.Optional(CONF_RESTORE_MODE, default='RESTORE_DEFAULT_OFF'):
+        cv.enum(RESTORE_MODES, upper=True, space='_'),
 })
 
 
 @coroutine
 def setup_switch_core_(var, config):
     cg.add(var.set_name(config[CONF_NAME]))
+    cg.add(var.set_restore_mode(config[CONF_RESTORE_MODE]))
     if CONF_INTERNAL in config:
         cg.add(var.set_internal(config[CONF_INTERNAL]))
     if CONF_ICON in config:

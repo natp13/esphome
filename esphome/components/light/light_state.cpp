@@ -106,7 +106,7 @@ void LightState::setup() {
   switch (this->restore_mode_) {
     case LIGHT_RESTORE_DEFAULT_OFF:
     case LIGHT_RESTORE_DEFAULT_ON:
-      this->rtc_ = global_preferences.make_preference<LightStateRTCState>(this->get_object_id_hash());
+      this->rtc_ = global_preferences.make_preference<LightStateRTCState>(this->get_object_id_hash(), DEFAULT_IN_FLASH);
       // Attempt to load from preferences, else fall back to default values from struct
       if (!this->rtc_.load(&recovered)) {
         recovered.state = this->restore_mode_ == LIGHT_RESTORE_DEFAULT_ON;

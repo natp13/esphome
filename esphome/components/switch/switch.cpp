@@ -29,11 +29,25 @@ void Switch::toggle() {
   ESP_LOGD(TAG, "'%s' Toggling %s.", this->get_name().c_str(), this->state ? "OFF" : "ON");
   this->write_state(this->inverted_ == this->state);
 }
-optional<bool> Switch::get_initial_state() {
-  this->rtc_ = global_preferences.make_preference<bool>(this->get_object_id_hash());
+bool Switch::get_initial_state() {
   bool initial_state;
-  if (!this->rtc_.load(&initial_state))
-    return {};
+
+  switch (this->restore_mode_) {
+    case SWITCH_RESTORE_DEFAULT_OFF:
+    case SWITCH_RESTORE_DEFAULT_ON:
+      this->rtc_ = global_preferences.make_preference<bool>(this->get_object_id_hash());
+      // Attempt to load from preferences, else fall back to default values from struct
+        if (!this->rtc_.load(&initial_state))
+          initial_state = (this->restore_mode_ == SWITCH_RESTORE_DEFAULT_ON);
+      break;
+    case SWITCH_ALWAYS_OFF:
+      initial_state = false;
+      break;
+    case SWITCH_ALWAYS_ON:
+      initial_state = true;
+      break;
+  }
+
   return initial_state;
 }
 void Switch::publish_state(bool state) {
@@ -41,6 +55,7 @@ void Switch::publish_state(bool state) {
     return;
   this->state = state != this->inverted_;
 
+  // TODO: Need to check that this doesn't store in flash if restore_state
   this->rtc_.save(&this->state);
   ESP_LOGD(TAG, "'%s': Sending state %s", this->name_.c_str(), ONOFF(state));
   this->state_callback_.call(this->state);
@@ -53,6 +68,10 @@ void Switch::add_on_state_callback(std::function<void(bool)> &&callback) {
 void Switch::set_inverted(bool inverted) { this->inverted_ = inverted; }
 uint32_t Switch::hash_base() { return 3129890955UL; }
 bool Switch::is_inverted() const { return this->inverted_; }
+
+void Switch::set_restore_mode(SwitchRestoreMode restore_mode) {
+  this->restore_mode_ = restore_mode;
+}
 
 }  // namespace switch_
 }  // namespace esphome
