@@ -1306,37 +1306,41 @@ RESTORE_MODES = {
 def stateful_component_schema(initial_value_type_validator):
     return Schema({
         # Optional(CONF_INITIAL_VALUE): templatable(initial_value_type_validator),
-        Optional(CONF_INITIAL_VALUE): initial_value_type_validator,
+        # : has_at_most_one_key(CONF_RESTORE_MODE, CONF_RESTORE_STATE, CONF_RESTORE_VALUE, CONF_RESTORE)
+        Optional(CONF_INITIAL_VALUE): templatable(initial_value_type_validator),
         Optional(CONF_RESTORE_MODE): enum(RESTORE_MODES, upper=True, space='_'),
-        Optional(CONF_RESTORE_STATE) : boolean, # deprecated
-        Optional(CONF_RESTORE_VALUE) : boolean, # deprecated
-        Optional(CONF_RESTORE) : boolean, # deprecated
+        # Optional(CONF_RESTORE_STATE) : boolean, # deprecated
+        # Optional(CONF_RESTORE_VALUE) : boolean, # deprecated
+        # Optional(CONF_RESTORE) : boolean, # deprecated
         # TODO: need to validate that only one of restore_state, etc is used. And log warning about deprecation?
-    })#, has_at_most_one_key(CONF_RESTORE_MODE, CONF_RESTORE_STATE, CONF_RESTORE_VALUE, CONF_RESTORE)
+    })
 
-def stateful_component_to_code(var, config, state_type, initial_value_fallback):
-    restore_mode = 'DEFAULT'
+def stateful_component_to_code(var, config, state_type, initial_value_fallback, evaluate_initial_value = False):
+    restore_mode = RestoreMode.RESTORE_DEFAULT
     if CONF_RESTORE_MODE in config:
         if config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_OFF' or config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_ON':
-            restore_mode = 'DEFAULT'
+            restore_mode = RestoreMode.RESTORE_DEFAULT
         elif config[CONF_RESTORE_MODE] == 'ALWAYS_OFF' or config[CONF_RESTORE_MODE] == 'ALWAYS_ON':
-            restore_mode = 'ALWAYS_INITIAL_VALUE'
+            restore_mode = RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE
         else:
             restore_mode = config[CONF_RESTORE_MODE]
     elif CONF_RESTORE_STATE in config:
         if not config[CONF_RESTORE_STATE]:
-            restore_mode = 'ALWAYS_INITIAL_VALUE'
+            restore_mode = RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE
     elif CONF_RESTORE_VALUE in config:
         if not config[CONF_RESTORE_VALUE]:
-            restore_mode = 'ALWAYS_INITIAL_VALUE'
+            restore_mode = RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE
     elif CONF_RESTORE in config:
         if not config[CONF_RESTORE]:
-            restore_mode = 'ALWAYS_INITIAL_VALUE'
+            restore_mode = RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE
 
     initial_value = initial_value_fallback
 
     if CONF_INITIAL_VALUE in config:
-        initial_value = config[CONF_INITIAL_VALUE]
+        if evaluate_initial_value:
+            initial_value = cg.RawExpression(config[CONF_INITIAL_VALUE])
+        else:
+            initial_value = config[CONF_INITIAL_VALUE]
     elif CONF_RESTORE_MODE in config:
         if config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_OFF' or config[CONF_RESTORE_MODE] == 'ALWAYS_OFF':
             initial_value = False
@@ -1345,9 +1349,9 @@ def stateful_component_to_code(var, config, state_type, initial_value_fallback):
 
     global_preferences = cg.esphome_ns.class_("global_preferences")
     cg.add(var.set_preference(global_preferences.make_preference(cg.TemplateArguments(state_type), 
-        var.get_object_id_hash(),
-        restore_mode,
-        initial_value)))
+                                                                 var.get_object_id_hash(),
+                                                                 restore_mode,
+                                                                 initial_value)))
 
 def polling_component_schema(default_update_interval):
     """Validate that this component represents a PollingComponent with a configurable

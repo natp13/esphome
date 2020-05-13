@@ -31,7 +31,7 @@ void Switch::toggle() {
 }
 bool Switch::get_initial_state() {
   bool initial_state;
-  // TODO: check bool?
+  // TODO: check return bool?
   this->rtc_.load(&initial_state);
   return initial_state;
 }
@@ -40,7 +40,6 @@ void Switch::publish_state(bool state) {
     return;
   this->state = state != this->inverted_;
 
-  // TODO: Need to check that this doesn't store in flash if restore_state
   this->rtc_.save(&this->state);
   ESP_LOGD(TAG, "'%s': Sending state %s", this->name_.c_str(), ONOFF(state));
   this->state_callback_.call(this->state);

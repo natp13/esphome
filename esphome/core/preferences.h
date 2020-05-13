@@ -142,9 +142,16 @@ template<typename T> ESPPreferenceObject ESPPreferences::make_preference(
 }
 
 template<typename T> bool ESPPreferenceObject::save(T *src) {
-    if (!this->is_initialized())
+  if (!this->is_initialized())
     return false;
 
+  if (this->restore_mode_ == RESTORE_ALWAYS_INITIAL_VALUE)
+  {
+    return true;
+  }
+
+  // TODO: should we check here that we aren't saving if it's the same? Probably better than making
+  // each object check for us.
   memset(this->data_, 0, this->length_words_ * 4);
   memcpy(this->data_, src, sizeof(T));
 

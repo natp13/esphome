@@ -40,9 +40,6 @@ float TemplateSwitch::get_setup_priority() const { return setup_priority::HARDWA
 Trigger<> *TemplateSwitch::get_turn_on_trigger() const { return this->turn_on_trigger_; }
 Trigger<> *TemplateSwitch::get_turn_off_trigger() const { return this->turn_off_trigger_; }
 void TemplateSwitch::setup() {
-  if (!this->restore_state_)
-    return;
-
   bool restored = this->get_initial_state();
 
   ESP_LOGD(TAG, "  Restored state %s", ONOFF(restored));
@@ -57,7 +54,6 @@ void TemplateSwitch::dump_config() {
   ESP_LOGCONFIG(TAG, "  Restore State: %s", YESNO(this->restore_state_));
   ESP_LOGCONFIG(TAG, "  Optimistic: %s", YESNO(this->optimistic_));
 }
-void TemplateSwitch::set_restore_state(bool restore_state) { this->restore_state_ = restore_state; }
 void TemplateSwitch::set_assumed_state(bool assumed_state) { this->assumed_state_ = assumed_state; }
 
 }  // namespace template_

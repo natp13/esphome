@@ -36,3 +36,35 @@ switch:
     name: "Living Room Dehumidifier"
     initial_value: Off
     restore_mode: ALWAYS_INITIAL_VALUE
+  - platform: gpio
+    pin: GPIO2
+    name: "my switch 2"
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: template
+    name: ${deviceName} Deep Sleep Enabled
+    retain_commands: True
+    lambda: |-
+      return (id(deep_sleep_enabled));
+    turn_on_action:
+      - lambda: |-
+          id(deep_sleep_enabled) = true;
+    turn_off_action:
+      - lambda: |-
+          id(deep_sleep_enabled) = false;
+
+globals:
+  - id: deep_sleep_enabled
+    type: bool
+    restore_value: False
+    initial_value: 'false'
+  - id: my_global_2
+    type: float
+    restore_value: True
+    initial_value: '5.5'
+  - id: my_global_3
+    type: int
+    initial_value: '10'
+    restore_mode: FROM_FLASH
+  - id: my_global_4
+    type: int
+    restore_value: True
