@@ -1,5 +1,5 @@
 esphome:
-  name: test1
+  name: test4
   # platform: ESP32
   # board: nodemcu-32s
   platform: ESP8266
@@ -32,7 +32,7 @@ mqtt:
 
 switch:
   - platform: gpio
-    pin: D0
+    pin: GPIO1
     name: "Living Room Dehumidifier"
     initial_value: Off
     restore_mode: ALWAYS_INITIAL_VALUE

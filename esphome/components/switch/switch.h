@@ -93,9 +93,7 @@ class Switch : public Nameable {
 
   bool is_inverted() const;
 
-  void set_preference(ESPPreferenceObject preference);
-
-  void set_initial_value(bool initial_value);
+  virtual void set_preference(ESPPreferenceObject preference);
 
  protected:
   /** Write the given state to hardware. You should implement this

@@ -57,11 +57,6 @@ bool Switch::is_inverted() const { return this->inverted_; }
 // TODO: move semantics??
 void Switch::set_preference(ESPPreferenceObject preference) {
   this->rtc_ = preference;
-  this->rtc_.set_fallback_value(false);
-}
-
-void Switch::set_initial_value(bool initial_value) {
-  this->rtc_.set_fallback_value<bool>(initial_value);
 }
 
 }  // namespace switch_

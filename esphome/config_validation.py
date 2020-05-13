@@ -1314,7 +1314,7 @@ def stateful_component_schema(initial_value_type_validator):
         # TODO: need to validate that only one of restore_state, etc is used. And log warning about deprecation?
     })#, has_at_most_one_key(CONF_RESTORE_MODE, CONF_RESTORE_STATE, CONF_RESTORE_VALUE, CONF_RESTORE)
 
-def stateful_component_to_code(var, config, state_type):
+def stateful_component_to_code(var, config, state_type, initial_value_fallback):
     restore_mode = 'DEFAULT'
     if CONF_RESTORE_MODE in config:
         if config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_OFF' or config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_ON':
@@ -1333,21 +1333,21 @@ def stateful_component_to_code(var, config, state_type):
         if not config[CONF_RESTORE]:
             restore_mode = 'ALWAYS_INITIAL_VALUE'
 
-    # cg.Add(var.rtc_ = global_preferences.make_preference<bool>(var.get_object_id_hash(), restore_mode))
-    # make_preference = cg.RawExpression("global_preferences.make_preference<bool>")
-    # new_preference = cg.Pvariable()
+    initial_value = initial_value_fallback
+
+    if CONF_INITIAL_VALUE in config:
+        initial_value = config[CONF_INITIAL_VALUE]
+    elif CONF_RESTORE_MODE in config:
+        if config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_OFF' or config[CONF_RESTORE_MODE] == 'ALWAYS_OFF':
+            initial_value = False
+        elif config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_ON' or config[CONF_RESTORE_MODE] == 'ALWAYS_ON':
+            initial_value = True
+
     global_preferences = cg.esphome_ns.class_("global_preferences")
     cg.add(var.set_preference(global_preferences.make_preference(cg.TemplateArguments(state_type), 
         var.get_object_id_hash(),
-        restore_mode)))
-
-    if CONF_INITIAL_VALUE in config:
-        cg.add(var.set_initial_value(config[CONF_INITIAL_VALUE]))
-    elif config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_OFF' or config[CONF_RESTORE_MODE] == 'ALWAYS_OFF':
-        cg.add(var.set_initial_value(False))
-    elif config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_ON' or config[CONF_RESTORE_MODE] == 'ALWAYS_ON':
-        cg.add(var.set_fallback_value(True))
-
+        restore_mode,
+        initial_value)))
 
 def polling_component_schema(default_update_interval):
     """Validate that this component represents a PollingComponent with a configurable

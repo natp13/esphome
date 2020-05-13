@@ -41,8 +41,6 @@ class ESPPreferenceObject {
 
   template<typename T> bool load(T *dest);
 
-  template<typename T> bool set_fallback_value(const T& fallback_value);
-
   bool is_initialized() const;
 
  protected:
@@ -84,7 +82,10 @@ class ESPPreferences {
   void begin();
   ESPPreferenceObject make_preference(size_t length, uint32_t type, bool in_flash = DEFAULT_IN_FLASH);
   template<typename T> ESPPreferenceObject make_preference(uint32_t type, bool in_flash = DEFAULT_IN_FLASH);
-  template<typename T> ESPPreferenceObject make_preference(uint32_t type, RestoreMode restore_mode);
+  template<typename T> ESPPreferenceObject make_preference(
+    uint32_t type,
+    RestoreMode restore_mode,
+    const T& initial_value);
 
 #ifdef ARDUINO_ARCH_ESP8266
   /** On the ESP8266, we can't override the first 128 bytes during OTA uploads
@@ -121,7 +122,8 @@ template<typename T> ESPPreferenceObject ESPPreferences::make_preference(uint32_
 
 template<typename T> ESPPreferenceObject ESPPreferences::make_preference(
   uint32_t type,
-  RestoreMode restore_mode) {
+  RestoreMode restore_mode,
+  const T& initial_value) {
   bool in_flash = DEFAULT_IN_FLASH;
   if (restore_mode == RESTORE_ALWAYS_INITIAL_VALUE)
     in_flash = false;
@@ -130,12 +132,21 @@ template<typename T> ESPPreferenceObject ESPPreferences::make_preference(
 
   auto result = this->make_preference((sizeof(T) + 3) / 4, type, in_flash);
   result.restore_mode_ = restore_mode;
+
+  memset(result.data_, 0, result.length_words_ * 4);
+  memcpy(result.data_, &initial_value, sizeof(T));
+
+  result.has_fallback_value_ = true;
+
   return result;
 }
 
 template<typename T> bool ESPPreferenceObject::save(T *src) {
-  if (!this->set_fallback_value(*src))
+    if (!this->is_initialized())
     return false;
+
+  memset(this->data_, 0, this->length_words_ * 4);
+  memcpy(this->data_, src, sizeof(T));
 
   return this->save_();
 }
@@ -155,16 +166,6 @@ template<typename T> bool ESPPreferenceObject::load(T *dest) {
     return false;
 
   memcpy(dest, this->data_, sizeof(T));
-  return true;
-}
-
-template<typename T> bool ESPPreferenceObject::set_fallback_value(const T& fallback_value) {
-  if (!this->is_initialized())
-    return false;
-  memset(this->data_, 0, this->length_words_ * 4);
-  memcpy(this->data_, &fallback_value, sizeof(T));
-
-  has_fallback_value_ = true;
   return true;
 }
 
