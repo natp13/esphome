@@ -31,12 +31,16 @@ def to_code(config):
     glob = cg.Pvariable(config[CONF_ID], rhs, type=res_type)
     yield cg.register_component(glob, config)
 
-    initial_value_fallback = cg.RawExpression("{}")
+    def get_initial_value(config):
+        initial_value = cg.RawExpression("{}")
+        if CONF_INITIAL_VALUE in config:
+            initial_value = cg.RawExpression(config[CONF_INITIAL_VALUE])
+        return initial_value
+
     cv.stateful_component_to_code(glob,
                                   config,
                                   type_,
-                                  initial_value_fallback,
-                                  evaluate_initial_value=True)
+                                  get_initial_value=get_initial_value)
 
 @automation.register_action('globals.set', GlobalVarSetAction, cv.Schema({
     cv.Required(CONF_ID): cv.use_id(GlobalsComponent),

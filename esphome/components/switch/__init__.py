@@ -58,7 +58,7 @@ def setup_switch_core_(var, config):
         mqtt_ = cg.new_Pvariable(config[CONF_MQTT_ID], var)
         yield mqtt.register_mqtt_component(mqtt_, config)
 
-    cv.stateful_component_to_code(var, config, bool, False)
+    cv.stateful_component_to_code(var, config, bool)
 
 
 @coroutine

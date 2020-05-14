@@ -1315,10 +1315,31 @@ def stateful_component_schema(initial_value_type_validator):
         # TODO: need to validate that only one of restore_state, etc is used. And log warning about deprecation?
     })
 
-def stateful_component_to_code(var, config, state_type, initial_value_fallback, evaluate_initial_value = False):
+def default_get_initial_value(config):
+    initial_value = cg.RawExpression("{}")
+
+    if CONF_INITIAL_VALUE in config:
+        initial_value = config[CONF_INITIAL_VALUE]
+    # Check for the deprecated gpio modes
+    elif CONF_RESTORE_MODE in config:
+        if ((config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_OFF') or
+                (config[CONF_RESTORE_MODE] == 'ALWAYS_OFF')):
+            initial_value = False
+        elif ((config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_ON') or
+                (config[CONF_RESTORE_MODE] == 'ALWAYS_ON')):
+            initial_value = True
+
+    return initial_value
+
+def stateful_component_to_code(var,
+                               config,
+                               state_type,
+                               get_initial_value=default_get_initial_value):
     restore_mode = RestoreMode.RESTORE_DEFAULT
+
     if CONF_RESTORE_MODE in config:
-        if config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_OFF' or config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_ON':
+        if ((config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_OFF') or
+                (config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_ON')):
             restore_mode = RestoreMode.RESTORE_DEFAULT
         elif config[CONF_RESTORE_MODE] == 'ALWAYS_OFF' or config[CONF_RESTORE_MODE] == 'ALWAYS_ON':
             restore_mode = RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE
@@ -1334,24 +1355,11 @@ def stateful_component_to_code(var, config, state_type, initial_value_fallback, 
         if not config[CONF_RESTORE]:
             restore_mode = RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE
 
-    initial_value = initial_value_fallback
-
-    if CONF_INITIAL_VALUE in config:
-        if evaluate_initial_value:
-            initial_value = cg.RawExpression(config[CONF_INITIAL_VALUE])
-        else:
-            initial_value = config[CONF_INITIAL_VALUE]
-    elif CONF_RESTORE_MODE in config:
-        if config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_OFF' or config[CONF_RESTORE_MODE] == 'ALWAYS_OFF':
-            initial_value = False
-        elif config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_ON' or config[CONF_RESTORE_MODE] == 'ALWAYS_ON':
-            initial_value = True
-
     global_preferences = cg.esphome_ns.class_("global_preferences")
-    cg.add(var.set_preference(global_preferences.make_preference(cg.TemplateArguments(state_type), 
+    cg.add(var.set_preference(global_preferences.make_preference(cg.TemplateArguments(state_type),
                                                                  var.get_object_id_hash(),
                                                                  restore_mode,
-                                                                 initial_value)))
+                                                                 get_initial_value(config))))
 
 def polling_component_schema(default_update_interval):
     """Validate that this component represents a PollingComponent with a configurable

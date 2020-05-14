@@ -68,3 +68,16 @@ globals:
   - id: my_global_4
     type: int
     restore_value: True
+
+
+output:
+  - platform: gpio
+    pin: GPIO12
+    id: relay_top
+
+light:
+  - platform: binary
+    name: "Garage Main"
+    output: relay_top
+    id: light_top
+    initial_value: On

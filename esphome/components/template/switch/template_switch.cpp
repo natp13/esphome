@@ -51,7 +51,6 @@ void TemplateSwitch::setup() {
 }
 void TemplateSwitch::dump_config() {
   LOG_SWITCH("", "Template Switch", this);
-  ESP_LOGCONFIG(TAG, "  Restore State: %s", YESNO(this->restore_state_));
   ESP_LOGCONFIG(TAG, "  Optimistic: %s", YESNO(this->optimistic_));
 }
 void TemplateSwitch::set_assumed_state(bool assumed_state) { this->assumed_state_ = assumed_state; }
