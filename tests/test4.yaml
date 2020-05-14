@@ -74,6 +74,9 @@ output:
   - platform: gpio
     pin: GPIO12
     id: relay_top
+  - platform: gpio
+    pin: GPIO4
+    id: gpio_switch1
 
 light:
   - platform: binary
@@ -81,3 +84,22 @@ light:
     output: relay_top
     id: light_top
     initial_value: On
+
+cover:
+  - platform: template
+    name: "Template Cover"
+    id: template_cover
+    lambda: |-
+      if (id(relay_top)) {
+        return COVER_OPEN;
+      } else {
+        return {};
+      }
+    optimistic: true
+    open_action:
+      - cover.template.publish:
+          id: template_cover
+          state: CLOSED
+    assumed_state: no
+    initial_value: OPEN
+    restore_mode: RESTORE_AND_CALL

@@ -13,10 +13,19 @@ from .types import (  # noqa
 
 IS_PLATFORM_COMPONENT = True
 
+LEGACY_LIGHT_RESTORE_MODES = {
+    'RESTORE_DEFAULT_OFF': False, # deprecated
+    'RESTORE_DEFAULT_ON': False, # deprecated
+    'ALWAYS_OFF': False, # deprecated
+    'ALWAYS_ON': False, # deprecated
+}
+
 LIGHT_SCHEMA = cv.MQTT_COMMAND_COMPONENT_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(LightState),
     cv.OnlyWith(CONF_MQTT_ID, 'mqtt'): cv.declare_id(mqtt.MQTTJSONLightComponent),
-}).extend(cv.stateful_component_schema(cv.boolean))#LightState.LightStateRTCState))
+}).extend(cv.stateful_component_schema(
+    cv.boolean,
+    cv.enum(LEGACY_LIGHT_RESTORE_MODES, upper=True, space='_')))
 
 BINARY_LIGHT_SCHEMA = LIGHT_SCHEMA.extend({
     cv.Optional(CONF_EFFECTS): validate_effects(BINARY_EFFECTS),

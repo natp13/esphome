@@ -147,9 +147,8 @@ class Cover : public Nameable {
    * First set the .position, .tilt, etc values and then call this method
    * to publish the state of the cover.
    *
-   * @param save Whether to save the updated values in RTC area.
    */
-  void publish_state(bool save = true);
+  void publish_state();
 
   virtual CoverTraits get_traits() = 0;
   void set_device_class(const std::string &device_class);
@@ -159,6 +158,8 @@ class Cover : public Nameable {
   bool is_fully_open() const;
   /// Helper method to check if the cover is fully closed. Equivalent to comparing .position against 0.0
   bool is_fully_closed() const;
+
+  void set_preference(ESPPreferenceObject preference) { this->rtc_ = preference; } 
 
  protected:
   friend CoverCall;

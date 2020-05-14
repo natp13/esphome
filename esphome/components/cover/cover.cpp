@@ -145,7 +145,7 @@ void Cover::stop() {
   call.perform();
 }
 void Cover::add_on_state_callback(std::function<void()> &&f) { this->state_callback_.add(std::move(f)); }
-void Cover::publish_state(bool save) {
+void Cover::publish_state() {
   this->position = clamp(this->position, 0.0f, 1.0f);
   this->tilt = clamp(this->tilt, 0.0f, 1.0f);
 
@@ -169,19 +169,15 @@ void Cover::publish_state(bool save) {
 
   this->state_callback_.call();
 
-  if (save) {
-    CoverRestoreState restore{};
-    memset(&restore, 0, sizeof(restore));
-    restore.position = this->position;
-    if (traits.get_supports_tilt()) {
-      restore.tilt = this->tilt;
-    }
-    this->rtc_.save(&restore);
+  CoverRestoreState restore{};
+  memset(&restore, 0, sizeof(restore));
+  restore.position = this->position;
+  if (traits.get_supports_tilt()) {
+    restore.tilt = this->tilt;
   }
+  this->rtc_.save(&restore);
 }
 optional<CoverRestoreState> Cover::restore_state_() {
-  // TODO: add restore_mode
-  this->rtc_ = global_preferences.make_preference<CoverRestoreState>(this->get_object_id_hash());
   CoverRestoreState recovered{};
   if (!this->rtc_.load(&recovered))
     return {};

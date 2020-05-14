@@ -1294,39 +1294,30 @@ COMPONENT_SCHEMA = Schema({
 
 RestoreMode = cg.esphome_ns.enum('RestoreMode')
 RESTORE_MODES = {
-    'RESTORE_DEFAULT_OFF': RestoreMode.RESTORE_DEFAULT_OFF, # deprecated
-    'RESTORE_DEFAULT_ON': RestoreMode.RESTORE_DEFAULT_ON, # deprecated
-    'ALWAYS_OFF': RestoreMode.RESTORE_ALWAYS_OFF, # deprecated
-    'ALWAYS_ON': RestoreMode.RESTORE_ALWAYS_ON, # deprecated
     'ALWAYS_INITIAL_VALUE': RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE,
     'DEFAULT': RestoreMode.RESTORE_DEFAULT,
     'FROM_FLASH': RestoreMode.RESTORE_FROM_FLASH,
 }
 
-def stateful_component_schema(initial_value_type_validator):
+def stateful_component_schema(initial_value_type_validator, legacy_modes=False):
     return Schema({
-        # Optional(CONF_INITIAL_VALUE): templatable(initial_value_type_validator),
-        # : has_at_most_one_key(CONF_RESTORE_MODE, CONF_RESTORE_STATE, CONF_RESTORE_VALUE, CONF_RESTORE)
         Optional(CONF_INITIAL_VALUE): templatable(initial_value_type_validator),
-        Optional(CONF_RESTORE_MODE): enum(RESTORE_MODES, upper=True, space='_'),
-        # Optional(CONF_RESTORE_STATE) : boolean, # deprecated
-        # Optional(CONF_RESTORE_VALUE) : boolean, # deprecated
-        # Optional(CONF_RESTORE) : boolean, # deprecated
-        # TODO: need to validate that only one of restore_state, etc is used. And log warning about deprecation?
+        Optional(CONF_RESTORE_MODE): Any(enum(RESTORE_MODES, upper=True, space='_'), legacy_modes)
     })
+    # TODO: how can we warn that the old restore modes are deprecated?
 
 def default_get_initial_value(config):
     initial_value = cg.RawExpression("{}")
 
     if CONF_INITIAL_VALUE in config:
         initial_value = config[CONF_INITIAL_VALUE]
-    # Check for the deprecated gpio modes
+    # Check for the deprecated switch modes
     elif CONF_RESTORE_MODE in config:
         if ((config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_OFF') or
                 (config[CONF_RESTORE_MODE] == 'ALWAYS_OFF')):
             initial_value = False
         elif ((config[CONF_RESTORE_MODE] == 'RESTORE_DEFAULT_ON') or
-                (config[CONF_RESTORE_MODE] == 'ALWAYS_ON')):
+              (config[CONF_RESTORE_MODE] == 'ALWAYS_ON')):
             initial_value = True
 
     return initial_value
@@ -1343,8 +1334,18 @@ def stateful_component_to_code(var,
             restore_mode = RestoreMode.RESTORE_DEFAULT
         elif config[CONF_RESTORE_MODE] == 'ALWAYS_OFF' or config[CONF_RESTORE_MODE] == 'ALWAYS_ON':
             restore_mode = RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE
-        else:
+        elif config[CONF_RESTORE_MODE] == 'NO_RESTORE':
+            restore_mode = RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE
+        elif ((config[CONF_RESTORE_MODE] == 'RESTORE') or
+              (config[CONF_RESTORE_MODE] == 'RESTORE_AND_CALL')):
+            restore_mode = RestoreMode.RESTORE_DEFAULT
+        elif config[CONF_RESTORE_MODE] == 'NO_RESTORE':
+            restore_mode = RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE
+        elif ((config[CONF_RESTORE_MODE] == 'ALWAYS_INITIAL_VALUE') or
+              (config[CONF_RESTORE_MODE] == 'DEFAULT') or
+              (config[CONF_RESTORE_MODE] == 'FROM_FLASH')):
             restore_mode = config[CONF_RESTORE_MODE]
+        # else: Another legacy restore mode that we want to handle with the default
     elif CONF_RESTORE_STATE in config:
         if not config[CONF_RESTORE_STATE]:
             restore_mode = RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE
@@ -1356,10 +1357,11 @@ def stateful_component_to_code(var,
             restore_mode = RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE
 
     global_preferences = cg.esphome_ns.class_("global_preferences")
-    cg.add(var.set_preference(global_preferences.make_preference(cg.TemplateArguments(state_type),
-                                                                 var.get_object_id_hash(),
-                                                                 restore_mode,
-                                                                 get_initial_value(config))))
+    cg.add(var.set_preference(global_preferences.make_preference(
+        cg.TemplateArguments(state_type),
+        var.get_object_id_hash(),
+        restore_mode,
+        get_initial_value(config))))
 
 def polling_component_schema(default_update_interval):
     """Validate that this component represents a PollingComponent with a configurable

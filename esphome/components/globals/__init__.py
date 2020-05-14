@@ -16,9 +16,8 @@ CONFIG_SCHEMA = cv.Schema({
     cv.Required(CONF_ID): cv.declare_id(GlobalsComponent),
     cv.Required(CONF_TYPE): cv.string_strict,
     cv.Optional(CONF_INITIAL_VALUE): cv.string_strict,
-    cv.Optional(CONF_RESTORE_VALUE, default=False): cv.boolean,
+    cv.Optional(CONF_RESTORE_VALUE): cv.boolean, # don't set default in case they use RESTORE_MODE
 }).extend(cv.COMPONENT_SCHEMA).extend(cv.stateful_component_schema(cv.string_strict))
-                    #    cv.has_at_most_one_key(CONF_RESTORE_MODE, CONF_RESTORE_VALUE))
 
 # Run with low priority so that namespaces are registered first
 @coroutine_with_priority(-100.0)
