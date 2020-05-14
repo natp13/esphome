@@ -30,10 +30,7 @@ void Switch::toggle() {
   this->write_state(this->inverted_ == this->state);
 }
 bool Switch::get_initial_state() {
-  bool initial_state;
-  // TODO: check return bool?
-  this->rtc_.load(&initial_state);
-  return initial_state;
+  return (rtc_.load());
 }
 void Switch::publish_state(bool state) {
   if (!this->publish_dedup_.next(state))
@@ -53,8 +50,7 @@ void Switch::set_inverted(bool inverted) { this->inverted_ = inverted; }
 uint32_t Switch::hash_base() { return 3129890955UL; }
 bool Switch::is_inverted() const { return this->inverted_; }
 
-// TODO: move semantics??
-void Switch::set_preference(ESPPreferenceObject preference) {
+void Switch::set_preference(TypedESPPreferenceObject<bool>&& preference) {
   this->rtc_ = preference;
 }
 

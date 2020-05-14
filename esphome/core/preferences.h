@@ -37,7 +37,7 @@ class ESPPreferenceObject {
   ESPPreferenceObject();
   ESPPreferenceObject(size_t offset, size_t length, uint32_t type);
 
-  template<typename T> bool save(T *src);
+  template<typename T> bool save(const T *src);
 
   template<typename T> bool load(T *dest);
 
@@ -57,8 +57,6 @@ class ESPPreferenceObject {
   size_t length_words_;
   uint32_t type_;
   uint32_t *data_;
-  bool has_fallback_value_ = false;
-  RestoreMode restore_mode_ = RESTORE_DEFAULT;
 #ifdef ARDUINO_ARCH_ESP8266
   bool in_flash_{false};
 #endif
@@ -76,16 +74,32 @@ static bool DEFAULT_IN_FLASH = false;
 static bool DEFAULT_IN_FLASH = true;
 #endif
 
+template<typename T>
+class TypedESPPreferenceObject : public ESPPreferenceObject {
+ public:
+  TypedESPPreferenceObject() {}
+  TypedESPPreferenceObject(ESPPreferenceObject&& base) : ESPPreferenceObject(base) {}
+  void save(const T& value);
+  T&& load();
+ protected:
+  friend class ESPPreferences;
+  // TODO: it's so much easier to follow the code when we make a copy of the initial value rather
+  // than immediately storing it in the base class data_. But this does double the memory usage, so
+  // how concerned with memory are we? (especially with the additional copy below?)
+  T initial_state_;
+  RestoreMode restore_mode_ = RESTORE_DEFAULT;
+};
+
 class ESPPreferences {
  public:
   ESPPreferences();
   void begin();
   ESPPreferenceObject make_preference(size_t length, uint32_t type, bool in_flash = DEFAULT_IN_FLASH);
   template<typename T> ESPPreferenceObject make_preference(uint32_t type, bool in_flash = DEFAULT_IN_FLASH);
-  template<typename T> ESPPreferenceObject make_preference(
+  template<typename T> TypedESPPreferenceObject<T> make_preference(
     uint32_t type,
     RestoreMode restore_mode,
-    const T& initial_value);
+    T&& initial_value);
 
 #ifdef ARDUINO_ARCH_ESP8266
   /** On the ESP8266, we can't override the first 128 bytes during OTA uploads
@@ -120,60 +134,60 @@ template<typename T> ESPPreferenceObject ESPPreferences::make_preference(uint32_
   return this->make_preference((sizeof(T) + 3) / 4, type, in_flash);
 }
 
-template<typename T> ESPPreferenceObject ESPPreferences::make_preference(
+template<typename T> TypedESPPreferenceObject<T> ESPPreferences::make_preference(
   uint32_t type,
   RestoreMode restore_mode,
-  const T& initial_value) {
+  T&& initial_value) {
+
   bool in_flash = DEFAULT_IN_FLASH;
   if (restore_mode == RESTORE_ALWAYS_INITIAL_VALUE)
     in_flash = false;
   else if (restore_mode == RESTORE_FROM_FLASH)
     in_flash = true;
 
-  auto result = this->make_preference((sizeof(T) + 3) / 4, type, in_flash);
+  TypedESPPreferenceObject<T> result = TypedESPPreferenceObject<T>(this->make_preference<T>(type, in_flash));
+
   result.restore_mode_ = restore_mode;
-
-  memset(result.data_, 0, result.length_words_ * 4);
-  memcpy(result.data_, &initial_value, sizeof(T));
-
-  result.has_fallback_value_ = true;
+  result.initial_state_ = initial_value;
 
   return result;
 }
 
-template<typename T> bool ESPPreferenceObject::save(T *src) {
+template<typename T> bool ESPPreferenceObject::save(const T *src) {
   if (!this->is_initialized())
     return false;
-
-  if (this->restore_mode_ == RESTORE_ALWAYS_INITIAL_VALUE)
-  {
-    return true;
-  }
-
-  // TODO: should we check here that we aren't saving if it's the same? Probably better than making
-  // each object check for us.
   memset(this->data_, 0, this->length_words_ * 4);
   memcpy(this->data_, src, sizeof(T));
-
   return this->save_();
 }
 
 template<typename T> bool ESPPreferenceObject::load(T *dest) {
   memset(this->data_, 0, this->length_words_ * 4);
-
-  // Only try to load if we aren't supposed to restore the initial value
-  if ((this->restore_mode_ != RESTORE_ALWAYS_INITIAL_VALUE) &&
-    !this->load_() &&
-    !this->has_fallback_value_)
-      return false;
-
-  // It shouldn't be possible to be trying to restore the initial value without getting a fallback
-  // value.
-  if ((this->restore_mode_ == RESTORE_ALWAYS_INITIAL_VALUE) && !this->has_fallback_value_)
+  if (!this->load_())
     return false;
 
   memcpy(dest, this->data_, sizeof(T));
   return true;
+}
+
+template<typename T> void TypedESPPreferenceObject<T>::save(const T& value) {
+  // Store the new state if we couldn't load the old state, or it's a new value and we're not always
+  // just restoring the initial value anyway. It's very important we don't store the state if it's
+  // the same as the old state because there are a limited number of writes to the esp8266 flash.
+  T current_state;
+  if ((this->restore_mode_ != RESTORE_ALWAYS_INITIAL_VALUE) &&
+    (!(ESPPreferenceObject::template load<T>(&current_state)) || (value != current_state))) {
+    ESPPreferenceObject::template save<T>(&value);
+  }
+}
+
+template<typename T> T&& TypedESPPreferenceObject<T>::load() {
+  T result = this->initial_state_;
+
+  if (this->restore_mode_ != RESTORE_ALWAYS_INITIAL_VALUE)
+    ESPPreferenceObject::template load<T>(&result);
+
+  return std::move(result);
 }
 
 }  // namespace esphome

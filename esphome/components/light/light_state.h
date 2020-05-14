@@ -286,7 +286,7 @@ class LightState : public Nameable, public Component {
 
   void current_values_as_cwww(float *cold_white, float *warm_white);
 
-  void set_preference(ESPPreferenceObject preference) { rtc_ = preference; }
+  void set_preference(TypedESPPreferenceObject<LightStateRTCState>&& preference) { rtc_ = preference; }
 
  protected:
   friend LightOutput;
@@ -314,7 +314,7 @@ class LightState : public Nameable, public Component {
   LightEffect *get_active_effect_();
 
   /// Object used to store the persisted values of the light.
-  ESPPreferenceObject rtc_;
+  TypedESPPreferenceObject<LightStateRTCState> rtc_;
   /// Restore mode of the light.
   /// Default transition length for all transitions in ms.
   uint32_t default_transition_length_{};
@@ -338,6 +338,8 @@ class LightState : public Nameable, public Component {
   /// List of effects for this light.
   std::vector<LightEffect *> effects_;
 };
+
+bool operator!=(const LightState::LightStateRTCState& lhs, const LightState::LightStateRTCState& rhs);
 
 }  // namespace light
 }  // namespace esphome

@@ -9,6 +9,10 @@ static const char *TAG = "cover";
 const float COVER_OPEN = 1.0f;
 const float COVER_CLOSED = 0.0f;
 
+bool operator!=(const CoverRestoreState& lhs, const CoverRestoreState& rhs) {
+  return ((lhs.position != rhs.position) || (lhs.tilt != rhs.tilt));
+}
+
 const char *cover_command_to_str(float pos) {
   if (pos == COVER_OPEN) {
     return "OPEN";
@@ -175,13 +179,10 @@ void Cover::publish_state() {
   if (traits.get_supports_tilt()) {
     restore.tilt = this->tilt;
   }
-  this->rtc_.save(&restore);
+  this->rtc_.save(restore);
 }
 optional<CoverRestoreState> Cover::restore_state_() {
-  CoverRestoreState recovered{};
-  if (!this->rtc_.load(&recovered))
-    return {};
-  return recovered;
+  return this->rtc_.load();
 }
 Cover::Cover() : Cover("") {}
 std::string Cover::get_device_class() {

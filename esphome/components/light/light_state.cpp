@@ -7,6 +7,17 @@ namespace light {
 
 static const char *TAG = "light";
 
+bool operator!=(const LightState::LightStateRTCState& lhs, const LightState::LightStateRTCState& rhs) {
+  return ((lhs.state != rhs.state) ||
+    (lhs.brightness != rhs.brightness) ||
+    (lhs.red != rhs.red) ||
+    (lhs.green != rhs.green) ||
+    (lhs.blue != rhs.blue) ||
+    (lhs.white != rhs.white) ||
+    (lhs.color_temp != rhs.color_temp) ||
+    (lhs.effect != rhs.effect));
+}
+
 void LightState::start_transition_(const LightColorValues &target, uint32_t length) {
   this->transformer_ = make_unique<LightTransitionTransformer>(millis(), length, this->current_values, target);
   this->remote_values = this->transformer_->get_remote_values();
@@ -90,9 +101,7 @@ void LightState::setup() {
     effect->init_internal(this);
   }
 
-  LightState::LightStateRTCState recovered{};
-  // TODO: no return bool?
-  this->rtc_.load(&recovered);
+  LightState::LightStateRTCState recovered = this->rtc_.load();
 
   auto call = this->make_call();
   call.set_state(recovered.state);
@@ -325,7 +334,7 @@ void LightCall::perform() {
     saved.white = v.get_white();
     saved.color_temp = v.get_color_temperature();
     saved.effect = this->parent_->active_effect_index_;
-    this->parent_->rtc_.save(&saved);
+    this->parent_->rtc_.save(saved);
   }
 }
 

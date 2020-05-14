@@ -93,7 +93,7 @@ class Switch : public Nameable {
 
   bool is_inverted() const;
 
-  virtual void set_preference(ESPPreferenceObject preference);
+  virtual void set_preference(TypedESPPreferenceObject<bool>&& preference);
 
  protected:
   /** Write the given state to hardware. You should implement this
@@ -121,7 +121,7 @@ class Switch : public Nameable {
   CallbackManager<void(bool)> state_callback_{};
   bool inverted_{false};
   Deduplicator<bool> publish_dedup_;
-  ESPPreferenceObject rtc_;
+  TypedESPPreferenceObject<bool> rtc_;
 };
 
 }  // namespace switch_
