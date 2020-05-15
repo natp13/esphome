@@ -96,7 +96,7 @@ class ESPPreferences {
   void begin();
   ESPPreferenceObject make_preference(size_t length, uint32_t type, bool in_flash = DEFAULT_IN_FLASH);
   template<typename T> ESPPreferenceObject make_preference(uint32_t type, bool in_flash = DEFAULT_IN_FLASH);
-  template<typename T> TypedESPPreferenceObject<T> make_preference(
+  template<typename T> TypedESPPreferenceObject<T> make_typed_preference(
     uint32_t type,
     RestoreMode restore_mode,
     T&& initial_value);
@@ -134,7 +134,7 @@ template<typename T> ESPPreferenceObject ESPPreferences::make_preference(uint32_
   return this->make_preference((sizeof(T) + 3) / 4, type, in_flash);
 }
 
-template<typename T> TypedESPPreferenceObject<T> ESPPreferences::make_preference(
+template<typename T> TypedESPPreferenceObject<T> ESPPreferences::make_typed_preference(
   uint32_t type,
   RestoreMode restore_mode,
   T&& initial_value) {

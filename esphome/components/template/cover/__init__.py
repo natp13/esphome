@@ -18,7 +18,7 @@ RESTORE_MODES = {
 
 CONF_HAS_POSITION = 'has_position'
 
-CONFIG_SCHEMA = cover.cover_schema(cv.enum(RESTORE_MODES, upper=True, space='_')).extend({
+CONFIG_SCHEMA = cv.All(cover.cover_schema(cv.enum(RESTORE_MODES, upper=True, space='_')).extend({
     cv.GenerateID(): cv.declare_id(TemplateCover),
     cv.Optional(CONF_LAMBDA): cv.returning_lambda,
     cv.Optional(CONF_OPTIMISTIC, default=False): cv.boolean,
@@ -29,7 +29,7 @@ CONFIG_SCHEMA = cover.cover_schema(cv.enum(RESTORE_MODES, upper=True, space='_')
     cv.Optional(CONF_STOP_ACTION): automation.validate_automation(single=True),
     cv.Optional(CONF_TILT_ACTION): automation.validate_automation(single=True),
     cv.Optional(CONF_TILT_LAMBDA): cv.returning_lambda,
-})
+}), cv.has_at_most_one_key(CONF_RESTORE_MODE, RESTORE_MODES))
 
 
 def to_code(config):

@@ -5,8 +5,8 @@ from esphome.components import mqtt
 from esphome.const import CONF_AWAY, CONF_ID, CONF_INTERNAL, CONF_MAX_TEMPERATURE, \
     CONF_MIN_TEMPERATURE, CONF_MODE, CONF_TARGET_TEMPERATURE, \
     CONF_TARGET_TEMPERATURE_HIGH, CONF_TARGET_TEMPERATURE_LOW, CONF_TEMPERATURE_STEP, CONF_VISUAL, \
-    CONF_MQTT_ID, CONF_NAME
-from esphome.core import CORE, coroutine, coroutine_with_priority
+    CONF_MQTT_ID, CONF_NAME, CONF_INITIAL_VALUE
+from esphome.core import CORE, coroutine, coroutine_with_priority, ID
 
 IS_PLATFORM_COMPONENT = True
 
@@ -15,6 +15,7 @@ climate_ns = cg.esphome_ns.namespace('climate')
 Climate = climate_ns.class_('Climate', cg.Nameable)
 ClimateCall = climate_ns.class_('ClimateCall')
 ClimateTraits = climate_ns.class_('ClimateTraits')
+ClimateDeviceRestoreState = climate_ns.struct('ClimateDeviceRestoreState')
 
 ClimateMode = climate_ns.enum('ClimateMode')
 CLIMATE_MODES = {
@@ -29,6 +30,14 @@ validate_climate_mode = cv.enum(CLIMATE_MODES, upper=True)
 # Actions
 ControlAction = climate_ns.class_('ControlAction', automation.Action)
 
+CLIMATE_CONTROL_STATE_SCHEMA = cv.Schema({
+    cv.Optional(CONF_MODE): cv.templatable(validate_climate_mode),
+    cv.Optional(CONF_TARGET_TEMPERATURE): cv.templatable(cv.temperature),
+    cv.Optional(CONF_TARGET_TEMPERATURE_LOW): cv.templatable(cv.temperature),
+    cv.Optional(CONF_TARGET_TEMPERATURE_HIGH): cv.templatable(cv.temperature),
+    cv.Optional(CONF_AWAY): cv.templatable(cv.boolean),
+})
+
 CLIMATE_SCHEMA = cv.MQTT_COMMAND_COMPONENT_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(Climate),
     cv.OnlyWith(CONF_MQTT_ID, 'mqtt'): cv.declare_id(mqtt.MQTTClimateComponent),
@@ -38,8 +47,31 @@ CLIMATE_SCHEMA = cv.MQTT_COMMAND_COMPONENT_SCHEMA.extend({
         cv.Optional(CONF_TEMPERATURE_STEP): cv.temperature,
     }),
     # TODO: MQTT topic options
-})
+}).extend(cv.stateful_component_schema(CLIMATE_CONTROL_STATE_SCHEMA.extend(
+    cv.Schema({cv.GenerateID(): cv.declare_id(ClimateDeviceRestoreState)}))))
 
+def get_initial_value(config):
+    if CONF_INITIAL_VALUE not in config:
+        return cg.RawExpression("{}")
+
+    initial_value_config = config[CONF_INITIAL_VALUE]
+    initial_value = cg.variable(initial_value_config[CONF_ID], cg.RawExpression("{}"), ClimateDeviceRestoreState)
+
+    # initial_value = yield cg.get_variable(initial_value_config[CONF_ID])
+    # TOOD: set defaults?
+    # cg.add(cg.AssignmentExpression(name=initial_value))
+    if CONF_MODE in initial_value_config:
+        cg.add(cg.AssignmentExpression(None, None, initial_value.mode, initial_value_config[CONF_MODE], None))
+    if CONF_TARGET_TEMPERATURE in initial_value_config:
+        cg.add(cg.AssignmentExpression(None, None, initial_value.target_temperature, initial_value_config[CONF_TARGET_TEMPERATURE], None))
+    if CONF_TARGET_TEMPERATURE_LOW in initial_value_config:
+        cg.add(cg.AssignmentExpression(None, None, initial_value.target_temperature_low, initial_value_config[CONF_TARGET_TEMPERATURE_LOW], None))
+    if CONF_TARGET_TEMPERATURE_HIGH in initial_value_config:
+        cg.add(cg.AssignmentExpression(None, None, initial_value.target_temperature_high, initial_value_config[CONF_TARGET_TEMPERATURE_HIGH], None))
+    if CONF_AWAY in initial_value_config:
+        cg.add(cg.AssignmentExpression(None, None, initial_value.away, initial_value_config[CONF_AWAY], None))
+
+    return cg.CallExpression(cg.RawExpression("std::move"), initial_value)
 
 @coroutine
 def setup_climate_core_(var, config):
@@ -58,6 +90,8 @@ def setup_climate_core_(var, config):
         mqtt_ = cg.new_Pvariable(config[CONF_MQTT_ID], var)
         yield mqtt.register_mqtt_component(mqtt_, config)
 
+    cv.stateful_component_to_code(var, config, ClimateDeviceRestoreState, get_initial_value)
+
 
 @coroutine
 def register_climate(var, config):
@@ -66,15 +100,9 @@ def register_climate(var, config):
     cg.add(cg.App.register_climate(var))
     yield setup_climate_core_(var, config)
 
-
 CLIMATE_CONTROL_ACTION_SCHEMA = cv.Schema({
     cv.Required(CONF_ID): cv.use_id(Climate),
-    cv.Optional(CONF_MODE): cv.templatable(validate_climate_mode),
-    cv.Optional(CONF_TARGET_TEMPERATURE): cv.templatable(cv.temperature),
-    cv.Optional(CONF_TARGET_TEMPERATURE_LOW): cv.templatable(cv.temperature),
-    cv.Optional(CONF_TARGET_TEMPERATURE_HIGH): cv.templatable(cv.temperature),
-    cv.Optional(CONF_AWAY): cv.templatable(cv.boolean),
-})
+}).extend(CLIMATE_CONTROL_STATE_SCHEMA)
 
 
 @automation.register_action('climate.control', ControlAction, CLIMATE_CONTROL_ACTION_SCHEMA)

@@ -1357,7 +1357,7 @@ def stateful_component_to_code(var,
             restore_mode = RestoreMode.RESTORE_ALWAYS_INITIAL_VALUE
 
     global_preferences = cg.esphome_ns.class_("global_preferences")
-    cg.add(var.set_preference(global_preferences.make_preference(
+    cg.add(var.set_preference(global_preferences.make_typed_preference(
         cg.TemplateArguments(state_type),
         var.get_object_id_hash(),
         restore_mode,

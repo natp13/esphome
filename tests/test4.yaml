@@ -36,10 +36,12 @@ switch:
     name: "Living Room Dehumidifier"
     initial_value: Off
     restore_mode: ALWAYS_INITIAL_VALUE
+    id: switch_1
   - platform: gpio
     pin: GPIO2
     name: "my switch 2"
     restore_mode: RESTORE_DEFAULT_OFF
+    id: switch_2
   - platform: template
     name: ${deviceName} Deep Sleep Enabled
     retain_commands: True
@@ -69,6 +71,15 @@ globals:
     type: int
     restore_value: True
 
+dallas:
+  - pin: GPIO6
+    update_interval: 5s
+
+sensor:
+  - platform: dallas
+    address: 0xE40316C25399FFFF
+    name: "fridge temp"
+    id: fridge_temperature
 
 output:
   - platform: gpio
@@ -103,3 +114,22 @@ cover:
     assumed_state: no
     initial_value: OPEN
     restore_mode: RESTORE_AND_CALL
+
+climate:
+  - platform: bang_bang
+    name: Bang Bang Climate
+    sensor: fridge_temperature
+    default_target_temperature_low: 18°C
+    default_target_temperature_high: 24°C
+    idle_action:
+      - switch.turn_on: switch_1
+    cool_action:
+      - switch.turn_on: switch_2
+    heat_action:
+      - switch.turn_on: switch_1
+    away_config:
+      default_target_temperature_low: 16°C
+      default_target_temperature_high: 20°C
+    initial_value:
+      mode: "off"
+      target_temperature: 65

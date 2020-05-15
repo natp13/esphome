@@ -4,7 +4,7 @@ from esphome import config_validation as cv, automation
 from esphome import codegen as cg
 from esphome.const import CONF_ID, CONF_INITIAL_VALUE, CONF_RESTORE_VALUE, CONF_TYPE, CONF_VALUE, \
     CONF_RESTORE_MODE
-from esphome.core import coroutine_with_priority
+from esphome.core import coroutine_with_priority, coroutine
 from esphome.py_compat import IS_PY3
 
 globals_ns = cg.esphome_ns.namespace('globals')
