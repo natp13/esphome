@@ -12,8 +12,7 @@ enum DHTModel {
   DHT_MODEL_DHT22,
   DHT_MODEL_AM2302,
   DHT_MODEL_RHT03,
-  DHT_MODEL_SI7021,
-  DHT_MODEL_DHT22_TYPE2
+  DHT_MODEL_SI7021
 };
 
 /// Component for reading temperature/humidity measurements from DHT11/DHT22 sensors.
@@ -29,7 +28,6 @@ class DHT : public PollingComponent {
    *  - DHT_MODEL_AM2302
    *  - DHT_MODEL_RHT03
    *  - DHT_MODEL_SI7021
-   *  - DHT_MODEL_DHT22_TYPE2
    *
    * @param model The DHT model.
    */
