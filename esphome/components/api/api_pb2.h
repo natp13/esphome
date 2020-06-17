@@ -28,10 +28,6 @@ enum FanSpeed : uint32_t {
   FAN_SPEED_MEDIUM = 1,
   FAN_SPEED_HIGH = 2,
 };
-enum FanDirection : uint32_t {
-  FAN_DIRECTION_FORWARD = 0,
-  FAN_DIRECTION_REVERSE = 1,
-};
 enum LogLevel : uint32_t {
   LOG_LEVEL_NONE = 0,
   LOG_LEVEL_ERROR = 1,
@@ -283,7 +279,6 @@ class ListEntitiesFanResponse : public ProtoMessage {
   std::string unique_id{};           // NOLINT
   bool supports_oscillation{false};  // NOLINT
   bool supports_speed{false};        // NOLINT
-  bool supports_direction{false};    // NOLINT
   void encode(ProtoWriteBuffer buffer) const override;
   void dump_to(std::string &out) const override;
 
@@ -294,11 +289,10 @@ class ListEntitiesFanResponse : public ProtoMessage {
 };
 class FanStateResponse : public ProtoMessage {
  public:
-  uint32_t key{0};                  // NOLINT
-  bool state{false};                // NOLINT
-  bool oscillating{false};          // NOLINT
-  enums::FanSpeed speed{};          // NOLINT
-  enums::FanDirection direction{};  // NOLINT
+  uint32_t key{0};          // NOLINT
+  bool state{false};        // NOLINT
+  bool oscillating{false};  // NOLINT
+  enums::FanSpeed speed{};  // NOLINT
   void encode(ProtoWriteBuffer buffer) const override;
   void dump_to(std::string &out) const override;
 
@@ -308,15 +302,13 @@ class FanStateResponse : public ProtoMessage {
 };
 class FanCommandRequest : public ProtoMessage {
  public:
-  uint32_t key{0};                  // NOLINT
-  bool has_state{false};            // NOLINT
-  bool state{false};                // NOLINT
-  bool has_speed{false};            // NOLINT
-  enums::FanSpeed speed{};          // NOLINT
-  bool has_oscillating{false};      // NOLINT
-  bool oscillating{false};          // NOLINT
-  bool has_direction{false};        // NOLINT
-  enums::FanDirection direction{};  // NOLINT
+  uint32_t key{0};              // NOLINT
+  bool has_state{false};        // NOLINT
+  bool state{false};            // NOLINT
+  bool has_speed{false};        // NOLINT
+  enums::FanSpeed speed{};      // NOLINT
+  bool has_oscillating{false};  // NOLINT
+  bool oscillating{false};      // NOLINT
   void encode(ProtoWriteBuffer buffer) const override;
   void dump_to(std::string &out) const override;
 

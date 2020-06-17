@@ -22,7 +22,6 @@ struct FanStateRTCState {
   bool state;
   FanSpeed speed;
   bool oscillating;
-  FanDirection direction;
 };
 
 void FanState::setup() {
@@ -35,7 +34,6 @@ void FanState::setup() {
   call.set_state(recovered.state);
   call.set_speed(recovered.speed);
   call.set_oscillating(recovered.oscillating);
-  call.set_direction(recovered.direction);
   call.perform();
 }
 float FanState::get_setup_priority() const { return setup_priority::HARDWARE - 1.0f; }
@@ -47,9 +45,6 @@ void FanStateCall::perform() const {
   }
   if (this->oscillating_.has_value()) {
     this->state_->oscillating = *this->oscillating_;
-  }
-  if (this->direction_.has_value()) {
-    this->state_->direction = *this->direction_;
   }
   if (this->speed_.has_value()) {
     switch (*this->speed_) {
@@ -68,7 +63,6 @@ void FanStateCall::perform() const {
   saved.state = this->state_->state;
   saved.speed = this->state_->speed;
   saved.oscillating = this->state_->oscillating;
-  saved.direction = this->state_->direction;
   this->state_->rtc_.save(&saved);
 
   this->state_->state_callback_.call();
