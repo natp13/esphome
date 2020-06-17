@@ -177,7 +177,7 @@ class _Schema(vol.Schema):
         self._extra_schemas.append(validator)
         return self
 
-    # pylint: disable=signature-differs
+    # pylint: disable=arguments-differ
     def extend(self, *schemas, **kwargs):
         extra = kwargs.pop('extra', None)
         if kwargs:
