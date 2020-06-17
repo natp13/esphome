@@ -128,20 +128,14 @@ spi:
   miso_pin: GPIO23
 
 uart:
-  - tx_pin: GPIO22
-    rx_pin: GPIO23
-    baud_rate: 115200
-    id: uart0
-    parity: NONE
-    data_bits: 8
-    stop_bits: 1
-    rx_buffer_size: 512
-
-  - id: adalight_uart
-    tx_pin: GPIO25
-    rx_pin: GPIO26
-    baud_rate: 115200
-    rx_buffer_size: 1024
+  tx_pin: GPIO22
+  rx_pin: GPIO23
+  baud_rate: 115200
+  id: uart0
+  parity: NONE
+  data_bits: 8
+  stop_bits: 1
+  rx_buffer_size: 512
 
 ota:
   safe_mode: True
@@ -184,8 +178,6 @@ dallas:
 as3935_spi:
   cs_pin: GPIO12
   irq_pin: GPIO13
-
-adalight:
 
 sensor:
   - platform: adc
@@ -1185,8 +1177,6 @@ light:
             if (initial_run) {
               it[0] = current_color;
             }
-    - adalight:
-        uart_id: adalight_uart
     - automation:
         name: Custom Effect
         sequence:
